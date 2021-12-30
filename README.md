@@ -4,6 +4,8 @@ Run docker trong terminal folder
 $ docker-compose up
 ~~~~
 Coppy file từ local lên namenode container
+
+Up file test.txt để test
 ~~~~
 $ docker cp <src-path> <container>:<dest-path> 
 ~~~~
