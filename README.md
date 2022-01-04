@@ -16,6 +16,12 @@ $ hadoop fs -copyFromLocal /path/in/linux /hdfs/path
 ~~~~
 Tạo file code đọc data từ hdfs qua elasticsearch
 
+Chạy lệnh để tăng config cho elasticsearch chạy
+~~~~
+wsl -d docker-desktop
+sysctl -w vm.max_map_count=262144
+~~~~
+
 **Spark**
 
 Gắn path cho spark-submit
