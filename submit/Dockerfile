@@ -1,10 +1,14 @@
-FROM bde2020/spark-base:3.2.0-hadoop3.2
+FROM bde2020/hadoop-base:2.0.0-hadoop3.2.1-java8
 
-LABEL maintainer="Gezim Sejdiu <g.sejdiu@gmail.com>, Giannis Mouchakis <gmouchakis@gmail.com>"
+MAINTAINER Ivan Ermilov <ivan.s.ermilov@gmail.com>
 
-ENV SPARK_MASTER_NAME spark-master
-ENV SPARK_MASTER_PORT 7077
+COPY WordCount.jar /opt/hadoop/applications/WordCount.jar
 
-COPY submit.sh /
+ENV JAR_FILEPATH="/opt/hadoop/applications/WordCount.jar"
+ENV CLASS_TO_RUN="WordCount"
+ENV PARAMS="/input /output"
 
-CMD ["/bin/bash", "/submit.sh"]
+ADD run.sh /run.sh
+RUN chmod a+x /run.sh
+
+CMD ["/run.sh"]

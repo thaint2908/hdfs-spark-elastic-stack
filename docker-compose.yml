@@ -7,44 +7,62 @@ services:
     restart: always
     ports:
       - 9870:9870
-      - 9000:9000
+      - 9010:9000
     volumes:
       - hadoop_namenode:/hadoop/dfs/name
+      - data:/mnt
     environment:
       - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
     env_file:
       - ./hadoop.env
+      
+  jupyterlab:
+    image: andreper/jupyterlab:3.0.0-spark-3.0.0
+    container_name: jupyterlab
+    ports:
+      - 8888:8888
+      - 4040:4040
 
-  datanode1:
+  datanode_1:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: datanode1
+    container_name: datanode_1
     restart: always
     volumes:
-      - hadoop_datanode1:/hadoop/dfs/data
+      - hadoop_datanode_1:/hadoop/dfs/data
     environment:
       SERVICE_PRECONDITION: "namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+    ports:
+      - "9864:9864"
     env_file:
       - ./hadoop.env
-
-  datanode2:
+      
+  datanode_2:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: datanode2
+    container_name: datanode_2
     restart: always
     volumes:
-      - hadoop_datanode2:/hadoop/dfs/data
+      - hadoop_datanode_2:/hadoop/dfs/data
     environment:
       SERVICE_PRECONDITION: "namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+    ports:
+      - "9865:9865"
     env_file:
       - ./hadoop.env
-
-  datanode3:
+      
+  datanode_3:
     image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
-    container_name: datanode3
+    container_name: datanode_3
     restart: always
     volumes:
-      - hadoop_datanode3:/hadoop/dfs/data
+      - hadoop_datanode_3:/hadoop/dfs/data
     environment:
       SERVICE_PRECONDITION: "namenode:9870"
+      CORE_CONF_fs_defaultFS: hdfs://namenode:9000
+    ports:
+      - "9866:9866"
     env_file:
       - ./hadoop.env
 
@@ -53,7 +71,7 @@ services:
     container_name: resourcemanager
     restart: always
     environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 datanode2:9864 datanode3:9864"
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode_1:9864 datanode_2:9865 datanode_3:9866"
     env_file:
       - ./hadoop.env
 
@@ -62,7 +80,7 @@ services:
     container_name: nodemanager
     restart: always
     environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 datanode2:9864 datanode3:9864 resourcemanager:8088"
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode_1:9864 datanode_2:9865 datanode_3:9866"
     env_file:
       - ./hadoop.env
 
@@ -71,21 +89,29 @@ services:
     container_name: historyserver
     restart: always
     environment:
-      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode1:9864 datanode2:9864 datanode3:9864 resourcemanager:8088"
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode_1:9864 datanode_2:9865 datanode_3:9866"
     volumes:
       - hadoop_historyserver:/hadoop/yarn/timeline
     env_file:
       - ./hadoop.env
+
   spark-master:
-    image: bde2020/spark-master:3.2.0-hadoop3.2
+    image: bde2020/spark-master:3.0.0-hadoop3.2
     container_name: spark-master
+    depends_on:
+      - namenode
+      - datanode_1
+      - datanode_2
+      - datanode_3
     ports:
       - "8080:8080"
       - "7077:7077"
     environment:
       - INIT_DAEMON_STEP=setup_spark
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+
   spark-worker-1:
-    image: bde2020/spark-worker:3.2.0-hadoop3.2
+    image: bde2020/spark-worker:3.0.0-hadoop3.2
     container_name: spark-worker-1
     depends_on:
       - spark-master
@@ -93,24 +119,19 @@ services:
       - "8081:8081"
     environment:
       - "SPARK_MASTER=spark://spark-master:7077"
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      
   spark-worker-2:
-    image: bde2020/spark-worker:3.2.0-hadoop3.2
+    image: bde2020/spark-worker:3.0.0-hadoop3.2
     container_name: spark-worker-2
     depends_on:
       - spark-master
     ports:
-      - "8082:8081"
+      - "8082:8082"
     environment:
       - "SPARK_MASTER=spark://spark-master:7077"
-  spark-history-server:
-    image: bde2020/spark-history-server:3.2.0-hadoop3.2
-    container_name: spark-history-server
-    depends_on:
-      - spark-master
-    ports:
-      - "18081:18081"
-    volumes:
-      - /tmp/spark-events-local:/tmp/spark-events
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      
   es01:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.16.2
     container_name: es01
@@ -154,13 +175,16 @@ services:
       - es01
     ports:
       - 5601:5601
+
 volumes:
   hadoop_namenode:
-  hadoop_datanode1:
-  hadoop_datanode2:
-  hadoop_datanode3:
+  hadoop_datanode_1:
+  hadoop_datanode_2:
+  hadoop_datanode_3:
   hadoop_historyserver:
+  data:
   data01:
     driver: local
   data02:
     driver: local
+
